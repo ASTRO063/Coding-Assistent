@@ -7,7 +7,14 @@ authors = [
     { name = "ASTRO063", email = "manikanta.kodimala3@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "langchain>=1.4.2",
+    "langchain-openai>=1.6.2",
+    "langchain-openapi>=0.1.1",
+    "langgraph>=1.2.11",
+    "langgraph-api>=0.14.3",
+    "langgraph-cli>=0.4.31",
+]
 
 [project.scripts]
 coding-assistent = "coding_assistent:main"

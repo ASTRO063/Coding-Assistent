@@ -1,3 +1,6 @@
 .venv
 /*/*/__pycache__
 __pycache__
+/src/.langgraph_api
+.env
+.langgraph_api
