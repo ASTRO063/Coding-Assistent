@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel, Field
 from langchain_core.tools import tool
-from config import get_allowed_directory
+from utils import get_allowed_directory
 
 
 def _get_repo() -> git.Repo:
