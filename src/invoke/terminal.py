@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from dotenv import load_dotenv
 
@@ -7,42 +8,36 @@ from langchain_core.messages import HumanMessage, AIMessage
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
-from rich.syntax import Syntax
-from rich.live import Live
-from rich.markdown import Markdown
 from coding_assistent import agent
-
-from dotenv import load_dotenv
-
-# load_dotenv("")
-# PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-
-# load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
+from rich.live import Live
 
 # Initialize Rich Console
 console = Console()
 
-def terminal_agent(agent_executor):
+async def run_terminal_agent(agent_executor):
     """
-    Runs an interactive CLI loop for the LangChain agent.
+    Async terminal loop for LangChain agents using astream_events v2.
+    Provides live token streaming and clear visibility into tool executions.
     """
     console.clear()
     console.print(
         Panel.fit(
             "[bold green]Coding Assistant CLI[/bold green]\n"
             "Type [bold cyan]'exit'[/bold cyan] or [bold cyan]'quit'[/bold cyan] to stop.\n"
-            "Type [bold cyan]'clear'[/bold cyan] to reset chat memory.",
+            "Type [bold cyan]'clear'[/bold cyan] to reset conversation history.",
             title="Welcome",
             border_style="green"
         )
     )
 
-    # Maintain session conversation history
+    # Note: chat_history and config are not fully utilized in the current provided code, 
+    # but we keep them for structural integrity.
     chat_history = []
+    config = {"configurable": {"thread_id": "1"}}
 
     while True:
         try:
-            # Capture user prompt
+            # Capture user input using Rich Prompt
             user_input = Prompt.ask("\n[bold blue]User[/bold blue]").strip()
 
             if not user_input:
@@ -58,37 +53,56 @@ def terminal_agent(agent_executor):
                 console.print("[bold green]Chat history cleared.[/bold green]")
                 continue
 
-            console.print("\n[bold magenta]Assistant[/bold magenta]:", end=" ")
+            # Start the assistant response prefix
+            console.print("\n[bold magenta]Assistant[/bold magenta]: ", end="")
 
             full_response = ""
-            print(f"user_input", user_input)
-            # Stream response or invoke agent
-            question = HumanMessage(content=user_input)
-            response_text = agent_executor.invoke({"messages": [question]})
-            print(response_text['messages'][1].content)
-            
-            # Using stream (if your agent executor / LangGraph supports streaming)
-            with Live(console=console, refresh_per_second=15, vertical_overflow="visible") as live:
-                for token, metadata in agent.stream(
-                    {
-                        "input": user_input,
-                        "chat_history": chat_history,
-                    },
-                    stream_mode="messages"
-                ):
-                    # Check token for text content
-                    if hasattr(token, "content") and token.content:
-                        print("token --", token)
-                        if isinstance(token.content, str):
-                            full_response += token.content
-                        elif isinstance(token.content, list):
-                            for block in token.content:
-                                if isinstance(block, dict) and block.get("type") == "text":
-                                    full_response += block.get("text", "")
-                        
-                        live.update(Markdown(full_response))
+            in_tool_call = False
 
-            # Record history
+            # Stream events using v2 engine (REMOVED REDUNDANT AGENT.STREAM CALL)
+            async for event in agent.astream_events(
+                {"messages": [HumanMessage(user_input)]},
+                config = config,
+                version="v2"
+            ):
+                event_type = event["event"]
+
+                # 1. Catch streaming LLM tokens
+                if event_type == "on_chat_model_stream":
+                    chunk = event["data"]["chunk"]
+                    if hasattr(chunk, "content") and chunk.content:
+                        content = chunk.content
+                        if isinstance(content, str):
+                            # If coming back from a tool call, print assistant prompt prefix
+                            if in_tool_call:
+                                console.print("\n[bold magenta]Assistant[/bold magenta]: ", end="")
+                                in_tool_call = False
+                            
+                            sys.stdout.write(content)
+                            sys.stdout.flush()
+                            full_response += content
+
+                # 2. Catch tool start events
+                elif event_type == "on_tool_start":
+                    in_tool_call = True
+                    tool_name = event.get("name", "Tool")
+                    tool_input = event["data"].get("input", {})
+                    
+                    console.print(
+                        f"\n[bold yellow]⚙ Executing Tool {tool_name}...[/bold yellow]"
+                    )
+                    if tool_input:
+                        console.print(f"[dim]Args: {tool_input}[/dim]")
+
+                # 3. Catch tool end events
+                elif event_type == "on_tool_end":
+                    tool_name = event.get("name", "Tool")
+                    console.print(f"[bold green]✔ Tool {tool_name} finished.[/bold green]")
+
+            # Ensure a new line is printed after the response completes
+            console.print()
+
+            # Record chat history
             chat_history.append(HumanMessage(content=user_input))
             chat_history.append(AIMessage(content=full_response))
 
@@ -97,12 +111,5 @@ def terminal_agent(agent_executor):
         except Exception as e:
             console.print(f"\n[bold red]Error during execution:[/bold red] {str(e)}")
 
-        # except KeyboardInterrupt:
-        #     console.print("\n[bold yellow]Session interrupted. Type 'exit' to quit.[/bold yellow]")
-        # except Exception as e:
-        #     console.print(f"\n[bold red]Error:[/bold red] {str(e)}")
-
 if __name__ == "__main__":
-    # Replace `your_agent_executor` with your existing agent instance
-    terminal_agent(agent)
-    pass
+    asyncio.run(run_terminal_agent(agent))
