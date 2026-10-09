@@ -3,6 +3,8 @@ We are building coding assisstance agent which can work with any LLM which is ru
 ### Local model setup
  You can ignore this step if you are using hosted llms.
 
+- Create models folder at root of the directory 
+
 - Get gemm4 model suitable for your system configurations from here https://gemmai4.com/download/#picker
 
 ```bash

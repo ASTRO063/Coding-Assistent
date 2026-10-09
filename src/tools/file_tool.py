@@ -2,7 +2,7 @@
 from pathlib import Path
 from pydantic import BaseModel, Field
 from langchain_core.tools import tool
-from config import get_allowed_directory
+from utils import get_allowed_directory
 
 
 class ReadFileInput(BaseModel):
