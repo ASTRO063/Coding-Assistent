@@ -3,7 +3,7 @@ import concurrent.futures
 from langchain.agents import create_agent
 from llm.local_llm import llm
 from tools import all_tools
-from mcp_client.mcp_client import client
+from mcp_client.client import client
 
 system_prompt = """
 You are a coding assistant that helps developers with their coding tasks.
