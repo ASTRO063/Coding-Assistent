@@ -1,6 +1,7 @@
 from langchain.agents import create_agent
 from llm.local_llm import llm
 from tools import all_tools
+from langgraph.checkpoint.memory import InMemorySaver
 
 
 system_prompt = """
@@ -12,4 +13,5 @@ You can provide code snippets, explanations, and guidance on various programming
 agent = create_agent(
     model=llm,
     tools=all_tools,
+    checkpointer=InMemorySaver(),
     system_prompt=system_prompt)

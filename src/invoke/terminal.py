@@ -30,9 +30,6 @@ async def run_terminal_agent(agent_executor):
         )
     )
 
-    # Note: chat_history and config are not fully utilized in the current provided code, 
-    # but we keep them for structural integrity.
-    chat_history = []
     config = {"configurable": {"thread_id": "1"}}
 
     while True:
@@ -48,7 +45,6 @@ async def run_terminal_agent(agent_executor):
                 break
 
             if user_input.lower() == "clear":
-                chat_history.clear()
                 console.clear()
                 console.print("[bold green]Chat history cleared.[/bold green]")
                 continue
@@ -101,10 +97,6 @@ async def run_terminal_agent(agent_executor):
 
             # Ensure a new line is printed after the response completes
             console.print()
-
-            # Record chat history
-            chat_history.append(HumanMessage(content=user_input))
-            chat_history.append(AIMessage(content=full_response))
 
         except KeyboardInterrupt:
             console.print("\n[bold yellow]Session interrupted. Type 'exit' to quit.[/bold yellow]")
